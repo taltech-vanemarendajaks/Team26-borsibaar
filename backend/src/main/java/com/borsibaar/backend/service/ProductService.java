@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -61,7 +62,7 @@ public class ProductService {
         Product saved = productRepository.save(entity);
 
         // Automatically create inventory record with 0 quantity
-        createInitialInventory(saved.getId(), orgId);
+        createInitialInventory(saved, orgId);
 
         ProductResponseDto base = productMapper.toResponse(saved);
         return new ProductResponseDto(
@@ -74,8 +75,8 @@ public class ProductService {
         );
     }
 
-    private void createInitialInventory(Long productId, Long organizationId) {
-        Inventory inventory = new Inventory(organizationId, productId, BigDecimal.ZERO);
+    private void createInitialInventory(Product product, Long organizationId) {
+        Inventory inventory = new Inventory(organizationId, product.getId(), BigDecimal.ZERO, product.getBasePrice());
         Inventory savedInventory = inventoryRepository.save(inventory);
 
         InventoryTransaction transaction = new InventoryTransaction();
@@ -84,6 +85,8 @@ public class ProductService {
         transaction.setQuantityChange(BigDecimal.ZERO);
         transaction.setQuantityBefore(BigDecimal.ZERO);
         transaction.setQuantityAfter(BigDecimal.ZERO);
+        transaction.setPriceBefore(Optional.ofNullable(product.getBasePrice()).orElse(BigDecimal.ZERO));
+        transaction.setPriceAfter(Optional.ofNullable(product.getBasePrice()).orElse(BigDecimal.ZERO));
         transaction.setNotes("Product created - initial inventory");
         transaction.setCreatedAt(OffsetDateTime.now());
         inventoryTransactionRepository.save(transaction);

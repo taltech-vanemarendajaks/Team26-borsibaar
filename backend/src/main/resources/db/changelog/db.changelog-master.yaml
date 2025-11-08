@@ -758,3 +758,47 @@ databaseChangeLog:
             sql: >
               INSERT INTO inventory (organization_id, product_id, quantity)
               SELECT 2, p.id, 150 FROM products p WHERE p.organization_id = 2 AND p.name = 'Coffee';
+  - changeSet:
+      id: 011-modify-inventory-add-adjusted-price
+      author: kris
+      changes:
+        - addColumn:
+            tableName: inventory
+            columns:
+              - column:
+                  name: adjusted_price
+                  type: DECIMAL(19,4)
+                  remarks: "Optional override of current effective price for this inventory record"
+      rollback:
+        - dropColumn:
+            tableName: inventory
+            columnName: adjusted_price
+
+  - changeSet:
+      id: 012-modify-inventory-transactions-add-price-before-after
+      author: kris
+      changes:
+        - addColumn:
+            tableName: inventory_transactions
+            columns:
+              - column:
+                  name: price_before
+                  type: DECIMAL(19,4)
+                  defaultValueNumeric: 0
+                  remarks: "Unit price in effect before the transaction"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_after
+                  type: DECIMAL(19,4)
+                  defaultValueNumeric: 0
+                  remarks: "Unit price in effect after the transaction"
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: inventory_transactions
+            columnName: price_after
+        - dropColumn:
+            tableName: inventory_transactions
+            columnName: price_before

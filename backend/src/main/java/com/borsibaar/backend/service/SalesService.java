@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -84,30 +85,44 @@ public class SalesService {
                     ". Available: " + oldQuantity + ", Requested: " + item.quantity());
         }
 
+
+        // Calculate pricing
+        BigDecimal priceBeforeSale = Optional.ofNullable(inventory.getAdjustedPrice())
+                .orElse(product.getBasePrice());
+        BigDecimal totalPrice = priceBeforeSale.multiply(item.quantity());
+
+        BigDecimal priceAfterSale = priceBeforeSale.add(Product.DEFAULT_PRICE_INCREASE);
+        if (product.getMaxPrice() != null && priceAfterSale.compareTo(product.getMaxPrice()) > 0) {
+            priceAfterSale = product.getMaxPrice();
+        }
+
         // Update inventory
         inventory.setQuantity(newQuantity);
         inventory.setUpdatedAt(OffsetDateTime.now());
+        inventory.setAdjustedPrice(priceAfterSale);
+
         inventory = inventoryRepository.save(inventory);
 
         // Create sale transaction
-        createSaleTransaction(inventory.getId(), item.quantity(), oldQuantity, newQuantity,
-                            saleId, userId);
+        createSaleTransaction(inventory.getId(), item.quantity(),
+                oldQuantity, newQuantity, priceBeforeSale, priceAfterSale,
+                saleId, userId);
 
-        // Calculate pricing
-        BigDecimal unitPrice = product.getBasePrice();
-        BigDecimal totalPrice = unitPrice.multiply(item.quantity());
+
+
 
         return new SaleItemResponseDto(
                 item.productId(),
                 product.getName(),
                 item.quantity(),
-                unitPrice,
+                priceBeforeSale,
                 totalPrice
         );
     }
 
     private void createSaleTransaction(Long inventoryId, BigDecimal quantity,
                                      BigDecimal quantityBefore, BigDecimal quantityAfter,
+                                     BigDecimal priceBefore, BigDecimal priceAfter,
                                      String saleId, UUID userId) {
         InventoryTransaction transaction = new InventoryTransaction();
         transaction.setInventoryId(inventoryId);
@@ -115,6 +130,8 @@ public class SalesService {
         transaction.setQuantityChange(quantity.negate()); // Negative for sales
         transaction.setQuantityBefore(quantityBefore);
         transaction.setQuantityAfter(quantityAfter);
+        transaction.setPriceBefore(priceBefore);
+        transaction.setPriceAfter(priceAfter);
         transaction.setReferenceId(saleId);
         transaction.setNotes("POS Sale");
         transaction.setCreatedBy(userId);

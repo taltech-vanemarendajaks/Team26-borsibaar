@@ -9,6 +9,8 @@ public record InventoryTransactionResponseDto(
         BigDecimal quantityChange,
         BigDecimal quantityBefore,
         BigDecimal quantityAfter,
+        BigDecimal priceBefore,
+        BigDecimal priceAfter,
         String referenceId,
         String notes,
         String createdBy,

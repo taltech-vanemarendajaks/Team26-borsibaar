@@ -9,5 +9,6 @@ public record InventoryResponseDto(
         String productName,
         BigDecimal quantity,
         BigDecimal unitPrice,
+        BigDecimal basePrice,
         String updatedAt
 ) {}

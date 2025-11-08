@@ -35,11 +35,15 @@ public class Inventory {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "adjusted_price", precision = 19, scale = 4)
+    private BigDecimal adjustedPrice;
+
     // Custom constructor for easy creation
-    public Inventory(Long organizationId, Long productId, BigDecimal quantity) {
+    public Inventory(Long organizationId, Long productId, BigDecimal quantity, BigDecimal adjustedPrice) {
         this.organizationId = organizationId;
         this.productId = productId;
         this.quantity = quantity;
+        this.adjustedPrice = adjustedPrice;
         this.createdAt = OffsetDateTime.now();
         this.updatedAt = OffsetDateTime.now();
     }

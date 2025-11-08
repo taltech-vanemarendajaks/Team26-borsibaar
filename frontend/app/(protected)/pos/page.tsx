@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import clsx from "clsx";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ interface Product {
   productName: string;
   quantity: number;
   unitPrice: number;
+  basePrice: number;
   updatedAt: string;
 }
 
@@ -64,6 +66,8 @@ export default function POS() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('Loading products...')
+
       const url = selectedCategory
         ? `/api/backend/inventory?categoryId=${selectedCategory}`
         : "/api/backend/inventory";
@@ -117,6 +121,8 @@ export default function POS() {
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
+    const refreshInterval = setInterval(fetchProducts, 1000 * 60);
+    return (() => clearInterval(refreshInterval));
   }, [fetchProducts]);
 
   useEffect(() => {
@@ -219,8 +225,7 @@ export default function POS() {
       fetchProducts();
     } catch (err) {
       alert(
-        `Error processing sale: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Error processing sale: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
     } finally {
@@ -245,7 +250,7 @@ export default function POS() {
     return { color: "bg-green-100 text-green-800", label: "In Stock" };
   };
 
-  if (loading) {
+  if (loading && !products?.length) {
     return (
       <div className="min-h-screen bg-background p-6 flex items-center justify-center">
         <div className="text-center">
@@ -335,7 +340,13 @@ export default function POS() {
         <div className="flex gap-6">
           {/* Products Grid (70%) */}
           <div className="flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className={clsx("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4",
+              {
+                'transition-all duration-300': true,
+                'pointer-events-none blur-xs': loading,
+                'blur-none': !loading
+              },
+            )}>
               {filteredProducts.map((product) => {
                 const status = getStockStatus(product.quantity);
                 const inCart = cart.find(
@@ -356,9 +367,18 @@ export default function POS() {
                     </div>
 
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-lg font-bold text-green-400">
-                        ${product.unitPrice.toFixed(2)}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className={clsx("text-lg font-bold ", {
+                          'text-red-400': product.unitPrice > product.basePrice,
+                          'text-white': product.unitPrice == product.basePrice,
+                          'text-green-400': product.unitPrice < product.basePrice,
+                        })}>
+                          ${product.unitPrice.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-white opacity-50">
+                          ${product.basePrice?.toFixed(2)}
+                        </span>
+                      </div>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.color}`}
                       >

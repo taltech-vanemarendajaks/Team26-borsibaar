@@ -36,6 +36,12 @@ public class InventoryTransaction {
     @Column(name = "quantity_after", nullable = false, precision = 19, scale = 4)
     private BigDecimal quantityAfter;
 
+    @Column(name = "price_before", nullable = false, precision = 19, scale = 4)
+    private BigDecimal priceBefore;
+
+    @Column(name = "price_after", nullable = false, precision = 19, scale = 4)
+    private BigDecimal priceAfter;
+
     @Column(name = "reference_id", length = 100)
     private String referenceId;
 
