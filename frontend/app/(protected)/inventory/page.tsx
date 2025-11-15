@@ -372,6 +372,15 @@ export default function Inventory() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-300">
                     Product
                   </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-300">
+                    Current Price
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-300">
+                    Min Price
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-300">
+                    Max Price
+                  </th>
                   <th className="text-center py-3 px-4 font-semibold text-gray-300">
                     Quantity
                   </th>
@@ -396,6 +405,7 @@ export default function Inventory() {
                 ) : (
                   filteredInventory.map((item) => {
                     const status = getStockStatus(item.quantity);
+                    // @ts-ignore
                     return (
                       <tr
                         key={item.id}
@@ -408,6 +418,21 @@ export default function Inventory() {
                           <div className="text-sm text-gray-400">
                             ID: {item.productId}
                           </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="text-lg font-semibold text-gray-300">
+                            {parseFloat(item.basePrice).toFixed(2)}€
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="text-lg text-gray-300">
+                            {isNaN(parseFloat(item.minPrice)) ? "--" : parseFloat(item.minPrice).toFixed(2)}€
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="text-lg text-gray-300">
+                             {isNaN(parseFloat(item.maxPrice)) ? "--" : parseFloat(item.maxPrice).toFixed(2)}€
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span className="text-lg font-semibold text-gray-300">
