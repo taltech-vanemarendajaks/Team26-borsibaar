@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,12 +34,12 @@ class OrganizationServiceTest {
 
     @Test
     void create_SetsCreatedAtAndMaps() {
-        OrganizationRequestDto request = new OrganizationRequestDto("Org");
+        OrganizationRequestDto request = new OrganizationRequestDto("Org", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5));
         Organization entity = new Organization();
         when(organizationMapper.toEntity(request)).thenReturn(entity);
         Organization saved = new Organization(); saved.setId(3L); saved.setName("Org"); saved.setCreatedAt(OffsetDateTime.now());
         when(organizationRepository.save(entity)).thenReturn(saved);
-        when(organizationMapper.toResponse(saved)).thenReturn(new OrganizationResponseDto(3L, "Org",  saved.getCreatedAt(), saved.getUpdatedAt()));
+        when(organizationMapper.toResponse(saved)).thenReturn(new OrganizationResponseDto(3L, "Org",  saved.getCreatedAt(), saved.getUpdatedAt(), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5)));
 
         OrganizationResponseDto dto = organizationService.create(request);
         assertEquals(3L, dto.id());
@@ -56,7 +57,7 @@ class OrganizationServiceTest {
     void getAll_ReturnsMappedList() {
         Organization o = new Organization(); o.setId(1L); o.setName("A");
         when(organizationRepository.findAll()).thenReturn(List.of(o));
-        when(organizationMapper.toResponse(o)).thenReturn(new OrganizationResponseDto(1L, "A", null, OffsetDateTime.now()));
+        when(organizationMapper.toResponse(o)).thenReturn(new OrganizationResponseDto(1L, "A", null, OffsetDateTime.now(), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5)));
         var list = organizationService.getAll();
         assertEquals(1, list.size());
     }

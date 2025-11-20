@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -41,8 +42,8 @@ class OrganizationControllerTest {
 
     @Test
     void create_ReturnsCreated() throws Exception {
-        OrganizationRequestDto req = new OrganizationRequestDto("Org");
-        OrganizationResponseDto resp = new OrganizationResponseDto(1L, "Org", OffsetDateTime.now(), OffsetDateTime.now());
+        OrganizationRequestDto req = new OrganizationRequestDto("Org", BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5));
+        OrganizationResponseDto resp = new OrganizationResponseDto(1L, "Org", OffsetDateTime.now(), OffsetDateTime.now(), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5));
         when(organizationService.create(any(OrganizationRequestDto.class))).thenReturn(resp);
 
         mockMvc.perform(post("/api/organizations")
@@ -57,7 +58,7 @@ class OrganizationControllerTest {
 
     @Test
     void get_ReturnsDto() throws Exception {
-        OrganizationResponseDto resp = new OrganizationResponseDto(2L, "Org2", OffsetDateTime.now(), OffsetDateTime.now());
+        OrganizationResponseDto resp = new OrganizationResponseDto(2L, "Org2", OffsetDateTime.now(), OffsetDateTime.now(), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5));
         when(organizationService.getById(2L)).thenReturn(resp);
 
         mockMvc.perform(get("/api/organizations/2"))
@@ -70,8 +71,8 @@ class OrganizationControllerTest {
 
     @Test
     void getAll_ReturnsList() throws Exception {
-        OrganizationResponseDto resp1 = new OrganizationResponseDto(1L, "A", OffsetDateTime.now(), OffsetDateTime.now());
-        OrganizationResponseDto resp2 = new OrganizationResponseDto(2L, "B", OffsetDateTime.now(), OffsetDateTime.now());
+        OrganizationResponseDto resp1 = new OrganizationResponseDto(1L, "A", OffsetDateTime.now(), OffsetDateTime.now(), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5));
+        OrganizationResponseDto resp2 = new OrganizationResponseDto(2L, "B", OffsetDateTime.now(), OffsetDateTime.now(), BigDecimal.valueOf(0.5), BigDecimal.valueOf(0.5));
         when(organizationService.getAll()).thenReturn(List.of(resp1, resp2));
 
         mockMvc.perform(get("/api/organizations"))
@@ -79,5 +80,34 @@ class OrganizationControllerTest {
                 .andExpect(jsonPath("$", hasSize(2)));
 
         verify(organizationService).getAll();
+    }
+
+    @Test
+    void update_ReturnsUpdatedDto() throws Exception {
+        OrganizationRequestDto req = new OrganizationRequestDto(
+                "Updated Org",
+                BigDecimal.valueOf(1.0),
+                BigDecimal.valueOf(0.25)
+        );
+        OrganizationResponseDto resp = new OrganizationResponseDto(
+                5L,
+                "Updated Org",
+                OffsetDateTime.now(),
+                OffsetDateTime.now(),
+                BigDecimal.valueOf(1.0),
+                BigDecimal.valueOf(0.25)
+        );
+        when(organizationService.update(5L, req)).thenReturn(resp);
+
+        mockMvc.perform(put("/api/organizations/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(5))
+                .andExpect(jsonPath("$.name").value("Updated Org"))
+                .andExpect(jsonPath("$.priceIncreaseStep").value(1.0))
+                .andExpect(jsonPath("$.priceDecreaseStep").value(0.25));
+
+        verify(organizationService).update(5L, req);
     }
 }

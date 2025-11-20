@@ -2,6 +2,7 @@ package com.borsibaar.controller;
 
 import com.borsibaar.entity.Role;
 import com.borsibaar.entity.User;
+import com.borsibaar.repository.RoleRepository;
 import com.borsibaar.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,11 +18,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -35,6 +38,9 @@ class AccountControllerTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private RoleRepository roleRepository;
 
     @MockitoBean
     private ClientRegistrationRepository clientRegistrationRepository;
@@ -64,6 +70,9 @@ class AccountControllerTest {
     void onboarding_WithValidPayload_SetsOrganizationAndReturns204() throws Exception {
         User user = userWithOrgAndRole(null, "USER");
         setAuth(user);
+
+        Role adminRole = Role.builder().id(1L).name("ADMIN").build();
+        when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
 
         String payload = "{\"organizationId\":1,\"acceptTerms\":true}";
 
