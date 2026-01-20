@@ -7,9 +7,13 @@ Team SHAME
 ## Liikmed
 
 Matis Altermann - https://github.com/Moist-daddy
+
 Eve Tarnapovitš - https://github.com/Evetar
+
 Ada Marie Tammiksaar - https://github.com/eiramada
+
 Sten-Erik Sepper - https://github.com/Shrampus
+
 Hele-Liis Peedosk - https://github.com/heleliispeedosk
 
 ## Meeskonna töövoog
