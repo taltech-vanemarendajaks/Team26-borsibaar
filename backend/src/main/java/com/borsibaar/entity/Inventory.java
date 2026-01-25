@@ -22,6 +22,13 @@ public class Inventory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * TODO: remove duplicate organizationId (already in products table)
+     */
+    @Deprecated
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "product_id", nullable = false, insertable = false, updatable = false)
     private Long productId;
 
