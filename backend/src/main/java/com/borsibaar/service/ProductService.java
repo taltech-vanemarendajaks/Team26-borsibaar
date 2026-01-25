@@ -77,7 +77,7 @@ public class ProductService {
     }
 
     private void createInitialInventory(Product product, Long organizationId) {
-        Inventory inventory = new Inventory(organizationId, product, BigDecimal.ZERO, product.getBasePrice());
+        Inventory inventory = new Inventory(product, BigDecimal.ZERO, product.getBasePrice());
         Inventory savedInventory = inventoryRepository.save(inventory);
 
         InventoryTransaction transaction = new InventoryTransaction();
