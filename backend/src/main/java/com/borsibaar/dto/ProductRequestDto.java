@@ -15,4 +15,11 @@ public record ProductRequestDto(
                 @NotNull(message = "Max price is required") @DecimalMin(value = "0.0", inclusive = false, message = "Max price must be greater than 0") BigDecimal maxPrice,
 
                 @NotNull(message = "Category ID is required") Long categoryId) {
+    @AssertTrue(message = "Current price must be between min price and max price")
+    public boolean isPriceRangeValid() {
+        return minPrice.compareTo(maxPrice) <= 0
+                && currentPrice.compareTo(minPrice) >= 0
+                && currentPrice.compareTo(maxPrice) <= 0;
+    }
+
 }
