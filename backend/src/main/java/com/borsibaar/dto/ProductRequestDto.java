@@ -16,3 +16,38 @@ public record ProductRequestDto(
 
                 @NotNull(message = "Category ID is required") Long categoryId) {
 }
+public record ProductRequestDto(
+        @NotBlank
+        @Size(max = 120)
+        String name,
+
+        @Size(max = 1000)
+        String description,
+
+        @NotNull
+        @DecimalMin(value = "0.0", inclusive = false)
+        BigDecimal currentPrice,
+
+        @NotNull
+        @DecimalMin(value = "0.0", inclusive = false)
+        BigDecimal minPrice,
+
+        @NotNull
+        @DecimalMin(value = "0.0", inclusive = false)
+        BigDecimal maxPrice,
+
+        @NotNull
+        Long categoryId
+) {
+
+    @AssertTrue(message = "Current price must be between min price and max price")
+    public boolean isPriceRangeValid() {
+        if (currentPrice == null || minPrice == null || maxPrice == null) {
+            return true; // handled by @NotNull
+        }
+
+        return minPrice.compareTo(maxPrice) <= 0
+                && currentPrice.compareTo(minPrice) >= 0
+                && currentPrice.compareTo(maxPrice) <= 0;
+    }
+}
