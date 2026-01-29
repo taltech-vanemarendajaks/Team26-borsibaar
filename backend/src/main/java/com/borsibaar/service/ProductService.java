@@ -62,7 +62,7 @@ public class ProductService {
         Product saved = productRepository.save(entity);
 
         // Automatically create inventory record with 0 quantity
-        createInitialInventory(saved, orgId);
+        createInitialInventory(saved);
 
         ProductResponseDto base = productMapper.toResponse(saved);
         return new ProductResponseDto(
@@ -76,7 +76,7 @@ public class ProductService {
                 cat.getName());
     }
 
-    private void createInitialInventory(Product product, Long organizationId) {
+    private void createInitialInventory(Product product) {
         Inventory inventory = new Inventory(product, BigDecimal.ZERO, product.getBasePrice());
         Inventory savedInventory = inventoryRepository.save(inventory);
 

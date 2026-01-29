@@ -126,7 +126,7 @@ class InventoryServiceTest {
         Product p2 = new Product(); p2.setId(11L); p2.setActive(false); p2.setBasePrice(BigDecimal.ONE); p2.setName("B");
         when(productRepository.findById(10L)).thenReturn(Optional.of(p1));
         when(productRepository.findById(11L)).thenReturn(Optional.of(p2));
-        when(inventoryMapper.toResponse(inv1)).thenReturn(new InventoryResponseDto(1L,0L,"A",BigDecimal.ONE,BigDecimal.ONE, "abc", null,null,null,OffsetDateTime.now().toString()));
+        when(inventoryMapper.toResponse(inv1)).thenReturn(new InventoryResponseDto(1L,10L,"A",BigDecimal.ONE,BigDecimal.ONE, "abc", null,null,null,OffsetDateTime.now().toString()));
         List<InventoryResponseDto> result = inventoryService.getByOrganization(1L);
         assertEquals(1, result.size());
     }
@@ -170,7 +170,7 @@ class InventoryServiceTest {
 
     @Test
     void getTransactionHistory_MapsUserInfo() {
-        Inventory inv = new Inventory(); inv.setId(100L);  
+        Inventory inv = new Inventory(); inv.setId(100L);  inv.setProductId(10L);
         when(inventoryRepository.findByOrganizationIdAndProductId(1L, 10L)).thenReturn(Optional.of(inv));
         UUID uid = UUID.randomUUID();
         InventoryTransaction tx = new InventoryTransaction();
