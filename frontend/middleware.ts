@@ -44,12 +44,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protected routes: /dashboard, /onboarding, /pos
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
 
-
+// TODO(team): tiimi otsus selle clienti koha pealt
   ////////////////////////////////////////////////////////////////
   //if (pathname.startsWith("/client")) {
  // return NextResponse.next();
