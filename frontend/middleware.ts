@@ -23,15 +23,16 @@ async function fetchUser(req: NextRequest) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (
-    !["/login", "/dashboard", "/onboarding", "/pos"].some((p) =>
-      pathname.startsWith(p)
-    )
-  ) {
-    return NextResponse.next();
-  }
 
   const user = await fetchUser(req);
+
+
+  const protectedPaths = ["/dashboard", "/onboarding", "/pos"];
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+
+  if (isProtected && !user) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
 
   // /login redirects if authenticated
   if (pathname.startsWith("/login")) {
@@ -43,11 +44,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protected routes: /dashboard, /onboarding, /pos
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
 
+// TODO(team): tiimi otsus selle clienti koha pealt
+  ////////////////////////////////////////////////////////////////
+  //if (pathname.startsWith("/client")) {
+ // return NextResponse.next();
+//}
+
+//if (!user) {
+//  return NextResponse.redirect(new URL("/login", req.url));
+//}
+////////////////////////////////////////////////////////////////////
   if (
     (pathname.startsWith("/dashboard") || pathname.startsWith("/pos")) &&
     user.needsOnboarding
@@ -63,5 +70,12 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/dashboard/:path*", "/onboarding/:path*", "/pos/:path*"],
+  matcher: [
+    "/login",
+    "/dashboard/:path*",
+    "/onboarding/:path*",
+    "/pos/:path*",
+    "/inventory/:path*",
+    "/client/:path*",
+  ],
 };
