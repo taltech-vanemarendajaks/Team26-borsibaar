@@ -71,7 +71,7 @@ class InventoryServiceTest {
     void addStock_CreatesInventoryIfMissing() {
         Product product = new Product(); product.setId(5L); product.setOrganizationId(1L); product.setActive(true); product.setBasePrice(BigDecimal.valueOf(2));
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
-        when(inventoryRepository.findByProduct_OrganizationIdAndProductId(1L, 5L)).thenReturn(Optional.empty());
+        when(inventoryRepository.findByProductId(5L)).thenReturn(Optional.empty());
         when(inventoryRepository.save(any(Inventory.class))).thenAnswer(inv -> { Inventory i = inv.getArgument(0); i.setId(77L); return i; });
         when(inventoryMapper.toResponse(any())).thenAnswer(inv -> {
             Inventory i = inv.getArgument(0); return new InventoryResponseDto(i.getId(), i.getProductId(), "P", i.getQuantity(), i.getAdjustedPrice(), product.getDescription(), null, null, null, i.getUpdatedAt().toString()); });
@@ -96,7 +96,7 @@ class InventoryServiceTest {
         Product product = new Product(); product.setId(5L); product.setOrganizationId(1L); product.setActive(true); product.setBasePrice(BigDecimal.ONE);
         Inventory inv = new Inventory(); inv.setId(9L); inv.setProduct(product); inv.setProductId(5L); inv.setQuantity(BigDecimal.valueOf(2)); inv.setAdjustedPrice(BigDecimal.ONE); inv.setUpdatedAt(OffsetDateTime.now());
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
-        when(inventoryRepository.findByProduct_OrganizationIdAndProductId(1L, 5L)).thenReturn(Optional.of(inv));
+        when(inventoryRepository.findByProductId(5L)).thenReturn(Optional.of(inv));
         RemoveStockRequestDto request = new RemoveStockRequestDto(5L, BigDecimal.valueOf(5), null, null);
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> inventoryService.removeStock(request, userId, 1L));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
@@ -107,7 +107,7 @@ class InventoryServiceTest {
         Product product = new Product(); product.setId(5L); product.setOrganizationId(1L); product.setActive(true); product.setBasePrice(BigDecimal.valueOf(2));
         Inventory inv = new Inventory(); inv.setId(9L);  inv.setProduct(product); inv.setProductId(5L); inv.setQuantity(BigDecimal.valueOf(5)); inv.setAdjustedPrice(BigDecimal.valueOf(2)); inv.setUpdatedAt(OffsetDateTime.now());
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
-        when(inventoryRepository.findByProduct_OrganizationIdAndProductId(1L, 5L)).thenReturn(Optional.of(inv));
+        when(inventoryRepository.findByProductId(5L)).thenReturn(Optional.of(inv));
         when(inventoryRepository.save(any(Inventory.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(inventoryMapper.toResponse(any())).thenAnswer(a -> {
@@ -136,7 +136,7 @@ class InventoryServiceTest {
     @Test
     void getByProductAndOrganization_ProductInactive_Gone() {
         Inventory inv = new Inventory(); inv.setId(1L); inv.setProductId(10L); inv.setQuantity(BigDecimal.ONE); inv.setUpdatedAt(OffsetDateTime.now());
-        when(inventoryRepository.findByProduct_OrganizationIdAndProductId(1L, 10L)).thenReturn(Optional.of(inv));
+        when(inventoryRepository.findByProductId( 10L)).thenReturn(Optional.of(inv));
         Product p = new Product(); p.setId(10L); p.setActive(false); p.setBasePrice(BigDecimal.ONE); p.setName("A");
         when(productRepository.findById(10L)).thenReturn(Optional.of(p));
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> inventoryService.getByProductAndOrganization(10L, 1L));
@@ -157,7 +157,7 @@ class InventoryServiceTest {
         Product product = new Product(); product.setId(5L); product.setOrganizationId(1L); product.setActive(true); product.setBasePrice(new BigDecimal("2.00"));
         Inventory inv = new Inventory(); inv.setId(10L);  inv.setProduct(product); inv.setProductId(5L); inv.setQuantity(new BigDecimal("10")); inv.setAdjustedPrice(new BigDecimal("2.00")); inv.setUpdatedAt(OffsetDateTime.now());
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
-        when(inventoryRepository.findByProduct_OrganizationIdAndProductId(1L, 5L)).thenReturn(Optional.of(inv));
+        when(inventoryRepository.findByProductId(5L)).thenReturn(Optional.of(inv));
         when(inventoryRepository.save(any(Inventory.class))).thenAnswer(a -> a.getArgument(0));
         when(inventoryMapper.toResponse(any())).thenAnswer(a -> { Inventory i = a.getArgument(0); return new InventoryResponseDto(i.getId(), i.getProductId(), "Prod", i.getQuantity(), i.getAdjustedPrice(), product.getDescription(), null, null, null, i.getUpdatedAt().toString());});
 
@@ -173,7 +173,7 @@ class InventoryServiceTest {
     @Test
     void getTransactionHistory_MapsUserInfo() {
         Inventory inv = new Inventory(); inv.setId(100L);  inv.setProductId(10L);
-        when(inventoryRepository.findByProduct_OrganizationIdAndProductId(1L, 10L)).thenReturn(Optional.of(inv));
+        when(inventoryRepository.findByProductId(10L)).thenReturn(Optional.of(inv));
         UUID uid = UUID.randomUUID();
         InventoryTransaction tx = new InventoryTransaction();
         tx.setId(1L); tx.setInventory(inv); tx.setInventoryId(inv.getId()); tx.setTransactionType("SALE");
