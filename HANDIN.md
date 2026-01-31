@@ -8,7 +8,7 @@
 ## Merge conflict resolution
 * We were making similar changes to the same file, but one of us added (necessary) not-null validations that were missing. 
 * Merged locally two feature branches, and this resulted in a merge conflict. Accepted theirs.
-* ![Alt text](path/to/image.png)
+* ![Screenshot](git_homework_conflict.png)
 
 ## Work done by team members:
 * Hele-Liis
