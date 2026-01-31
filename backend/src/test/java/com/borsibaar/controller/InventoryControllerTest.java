@@ -94,16 +94,18 @@ class InventoryControllerTest {
                 verify(inventoryService).addStock(any(AddStockRequestDto.class), any(UUID.class), eq(1L));
         }
 
+        // ... existing code ...
         @Test
         void getOrganizationInventory_UsesQueryParams_WhenProvided() throws Exception {
                 when(inventoryService.getByOrganization(99L, 7L)).thenReturn(List.of(
-                                new InventoryResponseDto(1L, 10L, "Cola", BigDecimal.ONE, BigDecimal.TEN, "abc",
-                                                BigDecimal.TEN, null, null, OffsetDateTime.now().toString())));
+                        new InventoryResponseDto(1L, 10L, "Cola", BigDecimal.ONE, BigDecimal.TEN, "abc",
+                                BigDecimal.TEN, null, null, OffsetDateTime.now().toString())));
 
                 mockMvc.perform(get("/api/inventory").param("organizationId", "99").param("categoryId", "7"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$", hasSize(1)))
-                                .andExpect(jsonPath("$[0].organizationId").value(99));
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$", hasSize(1)))
+                        .andExpect(jsonPath("$[0].productId").value(10))
+                        .andExpect(jsonPath("$[0].productName").value("Cola"));
 
                 verify(inventoryService).getByOrganization(99L, 7L);
         }

@@ -135,12 +135,23 @@ class InventoryServiceTest {
 
     @Test
     void getByProductAndOrganization_ProductInactive_Gone() {
-        Inventory inv = new Inventory(); inv.setId(1L); inv.setProductId(10L); inv.setQuantity(BigDecimal.ONE); inv.setUpdatedAt(OffsetDateTime.now());
-        when(inventoryRepository.findByProductId( 10L)).thenReturn(Optional.of(inv));
-        Product p = new Product(); p.setId(10L); p.setActive(false); p.setBasePrice(BigDecimal.ONE); p.setName("A");
+        Product p = new Product();
+        p.setId(10L);
+        p.setOrganizationId(1L);
+        p.setActive(false);
+        p.setBasePrice(BigDecimal.ONE);
+        p.setName("A");
+
         when(productRepository.findById(10L)).thenReturn(Optional.of(p));
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> inventoryService.getByProductAndOrganization(10L, 1L));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> inventoryService.getByProductAndOrganization(10L, 1L)
+        );
         assertEquals(HttpStatus.GONE, ex.getStatusCode());
+
+        verify(productRepository).findById(10L);
+        verifyNoInteractions(inventoryRepository);
     }
 
     @Test
