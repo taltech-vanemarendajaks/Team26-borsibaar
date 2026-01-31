@@ -11,14 +11,11 @@ import java.util.Optional;
 
 @Repository
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
-    Optional<Inventory> findByOrganizationIdAndProductId(Long organizationId, Long productId);
+    Optional<Inventory> findByProductId(Long productId);
 
-    List<Inventory> findByOrganizationId(Long organizationId);
+    List<Inventory> findByProduct_OrganizationId(Long organizationId);
 
-    @Query("SELECT i FROM Inventory i JOIN Product p ON i.productId = p.id " +
-            "WHERE i.organizationId = :organizationId AND p.categoryId = :categoryId")
-    List<Inventory> findByOrganizationIdAndCategoryId(@Param("organizationId") Long organizationId,
-            @Param("categoryId") Long categoryId);
+    List<Inventory> findByProduct_OrganizationIdAndProduct_CategoryId(Long organizationId, Long categoryId);
 
     boolean existsByProductId(Long productId);
 }
