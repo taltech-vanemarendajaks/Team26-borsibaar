@@ -29,3 +29,8 @@ Iga liige:
 Pull request’id vaadatakse üle vähemalt ühe meeskonnaliikme poolt.
 
 Merge’id tehakse vähemalt kahel erineval viisil konfliktid lahendatakse koostöös
+
+## Merge strateegiad
+Kasutasime kaht tüüpi - tavaline merge ja squash merge. 
+Tiimiliikmete varasema kogemuse põhjal valisime tavapärase merge mitte rebase. 
+Nendega probleeme ei esinenud.
