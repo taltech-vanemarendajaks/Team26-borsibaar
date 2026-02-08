@@ -17,6 +17,7 @@ import java.io.IOException;
 @RequestMapping("/auth")
 public class AuthController {
     private final AuthService authService;
+
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
@@ -25,12 +26,16 @@ public class AuthController {
     }
 
     @GetMapping("/login/success")
-    public void success(HttpServletResponse response, OAuth2AuthenticationToken auth) throws IOException {
+    public void success(HttpServletRequest request, HttpServletResponse response, OAuth2AuthenticationToken auth) throws IOException {
         var result = authService.processOAuthLogin(auth);
+
+        // Determine if the original request was HTTPS (important behind nginx reverse proxy)
+        String proto = request.getHeader("X-Forwarded-Proto");
+        boolean isHttps = "https".equalsIgnoreCase(proto) || request.isSecure();
 
         Cookie cookie = new Cookie("jwt", result.dto().token());
         cookie.setHttpOnly(true);
-        cookie.setSecure(true); // HTTPS enabled with domain
+        cookie.setSecure(isHttps); // Option B: Secure only when HTTPS is actually used
         cookie.setPath("/");
         cookie.setMaxAge(24 * 60 * 60); // 1 day
         response.addCookie(cookie);
@@ -50,10 +55,14 @@ public class AuthController {
         // Clear the Spring Security context
         SecurityContextHolder.clearContext();
 
+        // Determine if the original request was HTTPS (important behind nginx reverse proxy)
+        String proto = request.getHeader("X-Forwarded-Proto");
+        boolean isHttps = "https".equalsIgnoreCase(proto) || request.isSecure();
+
         // Clear the JWT cookie
         Cookie jwtCookie = new Cookie("jwt", "");
         jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(true); // HTTPS enabled with domain
+        jwtCookie.setSecure(isHttps); // Option B: Secure only when HTTPS is actually used
         jwtCookie.setPath("/");
         jwtCookie.setMaxAge(0); // Expire immediately
         response.addCookie(jwtCookie);
