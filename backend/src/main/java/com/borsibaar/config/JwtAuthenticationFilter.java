@@ -10,6 +10,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -32,7 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Paths that must NEVER be touched by JWT authentication.
-     * OAuth relies on sessions and redirects — JWT here breaks it.
+     * OAuth relies on sessions and redirects — JWT here can break it.
      */
     private static final List<String> EXCLUDED_PATHS = List.of(
             "/oauth2/",
@@ -54,11 +56,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // If already authenticated (e.g., OAuth session), don't overwrite it.
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // Extract JWT token from cookie
         String token = extractJwtFromCookie(request);
 
         // If no token, continue without authentication
-        if (token == null) {
+        if (token == null || token.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -68,36 +76,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = jwtService.parseToken(token);
             String email = claims.getSubject();
 
-            if (email != null) {
-                Optional<User> userOptional = userRepository.findByEmailWithRole(email);
+            if (email == null || email.isBlank()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-                if (userOptional.isPresent()) {
-                    User user = userOptional.get();
+            Optional<User> userOptional = userRepository.findByEmailWithRole(email);
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    user,
-                                    null,
-                                    user.getRole() != null
-                                            ? Collections.singletonList(
-                                                    new SimpleGrantedAuthority(
-                                                            "ROLE_" + user.getRole().getName()))
-                                            : Collections.emptyList()
-                            );
+            if (userOptional.isEmpty()) {
+                log.warn("JWT subject email not found in DB: {}", email);
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
+            User user = userOptional.get();
+
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(
+                            user,
+                            null,
+                            user.getRole() != null
+                                    ? Collections.singletonList(
+                                            new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
+                                    )
+                                    : Collections.emptyList()
                     );
 
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                    logger.debug("JWT authentication set for user: {}", email);
-                } else {
-                    logger.warn("User not found for email: {}", email);
-                }
-            }
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+
+            log.debug("JWT authentication set for user: {}", email);
+
         } catch (Exception e) {
             // Invalid token → no auth, let Spring handle 401/403
-            logger.warn("JWT token validation failed: {}", e.getMessage());
+            // (don’t spam stacktraces unless debugging)
+            log.warn("JWT token validation failed: {}", e.getMessage());
+            // If you WANT stacktraces during debugging, switch to:
+            // log.warn("JWT token validation failed", e);
         }
 
         filterChain.doFilter(request, response);
@@ -107,9 +122,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Extracts JWT token from the "jwt" cookie.
      */
     private String extractJwtFromCookie(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
 
-        for (Cookie cookie : request.getCookies()) {
+        for (Cookie cookie : cookies) {
             if ("jwt".equals(cookie.getName())) {
                 return cookie.getValue();
             }

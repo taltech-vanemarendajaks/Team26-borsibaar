@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -14,7 +15,9 @@ import org.springframework.security.oauth2.client.web.DefaultOAuth2Authorization
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -28,6 +31,9 @@ public class SecurityConfig {
 
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${app.cors.allowed-origins}")
+    private String[] allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -74,6 +80,14 @@ public class SecurityConfig {
                 // CORS must be enabled BEFORE security filters
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
+                // IMPORTANT: For /api/**, do NOT redirect to OAuth/login. Return 401 instead.
+                .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                                new AntPathRequestMatcher("/api/**")
+                        )
+                )
+
                 // JWT filter applies ONLY to API requests (shouldNotFilter handles exclusions)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
@@ -95,17 +109,20 @@ public class SecurityConfig {
                                 "/auth/login/success"
                         ).permitAll()
 
-                        // Public API endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/organizations/**").permitAll()
+                        // Public API endpoints (GET + HEAD)
+                        .requestMatchers(HttpMethod.GET,  "/api/organizations/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/organizations/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/organizations").permitAll()
+
+                        .requestMatchers(HttpMethod.GET,  "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/categories/**").permitAll()
+
+                        .requestMatchers(HttpMethod.GET,  "/api/inventory/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/inventory/**").permitAll()
 
                         // Admin-only
                         .requestMatchers(HttpMethod.PUT, "/api/organizations/**")
                         .hasRole("ADMIN")
-
-                        // Temporarily public (as you noted)
-                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/inventory/**").permitAll()
 
                         // Everything else requires authentication
                         .anyRequest().authenticated()
@@ -122,20 +139,16 @@ public class SecurityConfig {
                 .build();
     }
 
-    @Value("${app.cors.allowed-origins}")
-    private String[] allowedOrigins;
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
         cfg.setAllowedOrigins(List.of(allowedOrigins));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
-        cfg.setAllowCredentials(true); // required for cookies/session
+        cfg.setAllowCredentials(true);
         cfg.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
         return source;
     }

@@ -1,11 +1,12 @@
 package com.borsibaar.controller;
 
 import com.borsibaar.service.AuthService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -26,19 +27,19 @@ public class AuthController {
     }
 
     @GetMapping("/login/success")
-    public void success(HttpServletRequest request, HttpServletResponse response, OAuth2AuthenticationToken auth) throws IOException {
+    public void success(HttpServletResponse response, OAuth2AuthenticationToken auth) throws IOException {
         var result = authService.processOAuthLogin(auth);
 
-        // Determine if the original request was HTTPS (important behind nginx reverse proxy)
-        String proto = request.getHeader("X-Forwarded-Proto");
-        boolean isHttps = "https".equalsIgnoreCase(proto) || request.isSecure();
+        // Force SameSite=None; Secure so cookies work properly with OAuth redirects and modern browsers
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", result.dto().token())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(24 * 60 * 60)
+                .sameSite("None")
+                .build();
 
-        Cookie cookie = new Cookie("jwt", result.dto().token());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(isHttps); // Option B: Secure only when HTTPS is actually used
-        cookie.setPath("/");
-        cookie.setMaxAge(24 * 60 * 60); // 1 day
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
         String redirect = result.needsOnboarding() ? "/onboarding" : "/dashboard";
         response.sendRedirect(frontendUrl + redirect);
@@ -52,24 +53,21 @@ public class AuthController {
             session.invalidate();
         }
 
-        // Clear the Spring Security context
         SecurityContextHolder.clearContext();
 
-        // Determine if the original request was HTTPS (important behind nginx reverse proxy)
-        String proto = request.getHeader("X-Forwarded-Proto");
-        boolean isHttps = "https".equalsIgnoreCase(proto) || request.isSecure();
+        // Expire JWT cookie (match attributes so browser actually removes it)
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .sameSite("None")
+                .build();
 
-        // Clear the JWT cookie
-        Cookie jwtCookie = new Cookie("jwt", "");
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(isHttps); // Option B: Secure only when HTTPS is actually used
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(0); // Expire immediately
-        response.addCookie(jwtCookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
         return ResponseEntity.ok().body(new LogoutResponse("Logged out successfully"));
     }
 
-    private record LogoutResponse(String message) {
-    }
+    private record LogoutResponse(String message) {}
 }
