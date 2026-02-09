@@ -25,64 +25,100 @@ import java.util.List;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-            CorsConfigurationSource corsConfigurationSource) throws Exception {
-        DefaultOAuth2AuthorizationRequestResolver defaultResolver = new DefaultOAuth2AuthorizationRequestResolver(
-                clientRegistrationRepository, "/oauth2/authorization");
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            CorsConfigurationSource corsConfigurationSource
+    ) throws Exception {
 
-        OAuth2AuthorizationRequestResolver customResolver = new OAuth2AuthorizationRequestResolver() {
-            @Override
-            public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
-                var req = defaultResolver.resolve(request);
-                if (req == null)
-                    return null;
-                return OAuth2AuthorizationRequest.from(req)
-                        .additionalParameters(p -> p.put("prompt", "select_account"))
-                        .build();
-            }
+        // Force Google account chooser every login
+        DefaultOAuth2AuthorizationRequestResolver defaultResolver =
+                new DefaultOAuth2AuthorizationRequestResolver(
+                        clientRegistrationRepository,
+                        "/oauth2/authorization"
+                );
 
-            @Override
-            public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
-                var req = defaultResolver.resolve(request, clientRegistrationId);
-                if (req == null)
-                    return null;
-                return OAuth2AuthorizationRequest.from(req)
-                        .additionalParameters(p -> p.put("prompt", "select_account"))
-                        .build();
-            }
-        };
+        OAuth2AuthorizationRequestResolver customResolver =
+                new OAuth2AuthorizationRequestResolver() {
+                    @Override
+                    public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
+                        OAuth2AuthorizationRequest req = defaultResolver.resolve(request);
+                        if (req == null) return null;
+                        return OAuth2AuthorizationRequest.from(req)
+                                .additionalParameters(p -> p.put("prompt", "select_account"))
+                                .build();
+                    }
+
+                    @Override
+                    public OAuth2AuthorizationRequest resolve(
+                            HttpServletRequest request,
+                            String clientRegistrationId
+                    ) {
+                        OAuth2AuthorizationRequest req =
+                                defaultResolver.resolve(request, clientRegistrationId);
+                        if (req == null) return null;
+                        return OAuth2AuthorizationRequest.from(req)
+                                .additionalParameters(p -> p.put("prompt", "select_account"))
+                                .build();
+                    }
+                };
 
         return http
+                // CSRF disabled for API + OAuth callback simplicity
                 .csrf(csrf -> csrf.disable())
-                // ✅ Let Spring Security add CORS headers on 401/403/preflight too
+
+                // CORS must be enabled BEFORE security filters
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                // Add JWT authentication filter before standard authentication
+
+                // JWT filter applies ONLY to API requests (shouldNotFilter handles exclusions)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                // Use IF_REQUIRED session management (stateless for API, sessions for OAuth2)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+
+                // OAuth uses sessions, API uses JWT → IF_REQUIRED is correct
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
+
                 .authorizeHttpRequests(auth -> auth
-                        // Allow OPTIONS for CORS preflight
+                        // CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Allow OAuth2 endpoints and public routes
-                        .requestMatchers("/", "/error", "/oauth2/**", "/login/oauth2/code/**", "/auth/login/success")
-                        .permitAll()
+
+                        // OAuth + public endpoints
+                        .requestMatchers(
+                                "/",
+                                "/error",
+                                "/oauth2/**",
+                                "/login/oauth2/code/**",
+                                "/auth/login/success"
+                        ).permitAll()
+
                         // Public API endpoints
                         .requestMatchers(HttpMethod.GET, "/api/organizations/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/organizations").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/organizations/**").hasRole("ADMIN")
-                        // Need to make these public for client page
-                        // TODO: these should not be fully public
+
+                        // Admin-only
+                        .requestMatchers(HttpMethod.PUT, "/api/organizations/**")
+                        .hasRole("ADMIN")
+
+                        // Temporarily public (as you noted)
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/inventory/**").permitAll()
-                        // All other API requests require authentication
-                        .anyRequest().authenticated())
+
+                        // Everything else requires authentication
+                        .anyRequest().authenticated()
+                )
+
                 .oauth2Login(oauth2 -> oauth2
+                        // Backend endpoint that sets JWT / cookie
                         .defaultSuccessUrl("/auth/login/success", true)
-                        .authorizationEndpoint(auth -> auth.authorizationRequestResolver(customResolver)))
+                        .authorizationEndpoint(auth ->
+                                auth.authorizationRequestResolver(customResolver)
+                        )
+                )
+
                 .build();
     }
 
@@ -92,13 +128,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(allowedOrigins)); // e.g. http://localhost:3000
+        cfg.setAllowedOrigins(List.of(allowedOrigins));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
-        cfg.setAllowCredentials(true); // since you send cookies
+        cfg.setAllowCredentials(true); // required for cookies/session
         cfg.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
         return source;
     }
