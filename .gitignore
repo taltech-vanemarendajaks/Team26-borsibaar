@@ -8,3 +8,10 @@ backend/.env
 nginx/ssl/
 *.pem
 *.key
+# local deployment artifacts
+*.tar
+backend/BOOT-INF/
+backend/META-INF/
+backend/org/
+backend/unpack/
+backend/ubuntu@*
