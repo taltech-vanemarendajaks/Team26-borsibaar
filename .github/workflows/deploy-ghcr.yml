@@ -1,0 +1,85 @@
+name: Build & Deploy (GHCR)
+
+on:
+  push:
+    branches:
+      - feature-dockerfile-optimization
+  workflow_dispatch:
+    inputs:
+      server_path:
+        description: "Server folder with docker-compose.yml (e.g. /opt/Matis or /opt/<name>)"
+        required: true
+        default: "/opt/Matis"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/borsibaar-backend:latest
+            ghcr.io/${{ github.repository_owner }}/borsibaar-backend:${{ github.sha }}
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/borsibaar-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/borsibaar-frontend:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH (pull + up)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            # choose path: workflow_dispatch input OR default /opt/Matis
+            SERVER_PATH="${{ github.event.inputs.server_path }}"
+            if [ -z "$SERVER_PATH" ]; then
+              SERVER_PATH="/opt/Matis"
+            fi
+
+            cd "$SERVER_PATH"
+
+            if docker compose version >/dev/null 2>&1; then
+              DC="docker compose"
+            else
+              DC="docker-compose"
+            fi
+
+            $DC pull
+            $DC up -d
+            $DC ps
