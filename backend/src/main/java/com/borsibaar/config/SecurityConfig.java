@@ -18,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -80,13 +81,23 @@ public class SecurityConfig {
                 // CORS must be enabled BEFORE security filters
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
-                // IMPORTANT: For /api/**, do NOT redirect to OAuth/login. Return 401 instead.
+                // =====================================================================
+                // ✅ HIGHLIGHTED ADDITION #1: "API MUST NOT REDIRECT" (return 401)
+                // This prevents login loops where API requests get 302->oauth2->... forever.
+                // =====================================================================
                 .exceptionHandling(ex -> ex
                         .defaultAuthenticationEntryPointFor(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                new AntPathRequestMatcher("/api/**")
+                                new OrRequestMatcher(
+                                        new AntPathRequestMatcher("/api/**"),
+                                        new AntPathRequestMatcher("/v3/api-docs/**"),
+                                        new AntPathRequestMatcher("/swagger-ui/**"),
+                                        new AntPathRequestMatcher("/swagger-ui.html"),
+                                        new AntPathRequestMatcher("/actuator/**")
+                                )
                         )
                 )
+                // =====================================================================
 
                 // JWT filter applies ONLY to API requests (shouldNotFilter handles exclusions)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -108,6 +119,16 @@ public class SecurityConfig {
                                 "/login/oauth2/code/**",
                                 "/auth/login/success"
                         ).permitAll()
+
+                        // =================================================================
+                        // ✅ HIGHLIGHTED ADDITION #2 (OPTIONAL but recommended):
+                        // If you want docs/actuator publicly visible, keep permitAll here.
+                        // If you *don’t* want them public, remove these lines.
+                        // (Even if protected, they will return 401 now—NOT redirect.)
+                        // =================================================================
+                        // .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // .requestMatchers("/actuator/**").permitAll()
+                        // =================================================================
 
                         // Public API endpoints (GET + HEAD)
                         .requestMatchers(HttpMethod.GET,  "/api/organizations/**").permitAll()
