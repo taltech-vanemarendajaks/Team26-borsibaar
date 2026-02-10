@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/moist-daddy/borsibaar-backend:7061348
+    image: ghcr.io/taltech-vanemarendajaks/borsibaar-backend:latest
     env_file:
       - ./backend.env
     depends_on:
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/moist-daddy/borsibaar-frontend:7061348
+    image: ghcr.io/taltech-vanemarendajaks/borsibaar-frontend:latest
     environment:
       BACKEND_URL: http://backend:8080
     expose:
