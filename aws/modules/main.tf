@@ -26,15 +26,11 @@ locals {
 }
 
 terraform {
-  backend "local" {
-    path = "terraform.tfstate"
+  backend "s3" {
+    bucket = "team-26-terraform-state"
+    key    = "state.tfstate"
+    region = "eu-north-1"
   }
-
-  # backend "s3" {
-  #   bucket = "nava-terraform-state-for-students"
-  #   key    = "tiim_26/state.tfstate"
-  #   region = "eu-north-1"
-  # }
 }
 
 provider "aws" {
