@@ -33,18 +33,15 @@ resource "aws_ecs_task_definition" "wordpress_task" {
         }
       ]
 
-      environment = [
+      secrets = [
         {
-          name  = "WORDPRESS_DB_HOST"
-          value = aws_ssm_parameter.wordpress_db_host.arn
+          name      = "WORDPRESS_DB_HOST"
+          valueFrom = aws_ssm_parameter.wordpress_db_host.arn
         },
         {
-          name  = "WORDPRESS_DB_NAME"
-          value = aws_ssm_parameter.wordpress_db_name.arn
-        }
-      ]
-
-      secrets = [
+          name      = "WORDPRESS_DB_NAME"
+          valueFrom = aws_ssm_parameter.wordpress_db_name.arn
+        },
         {
           name      = "WORDPRESS_DB_USER"
           valueFrom = "${aws_db_instance.database_instance.master_user_secret[0].secret_arn}:username::"
@@ -54,6 +51,16 @@ resource "aws_ecs_task_definition" "wordpress_task" {
           valueFrom = "${aws_db_instance.database_instance.master_user_secret[0].secret_arn}:password::"
         }
       ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/wordpress-td"
+          "awslogs-region"        = local.region
+          "awslogs-stream-prefix" = "ecs"
+          "awslogs-create-group"  = "true"
+        }
+      }
     }
   ])
 }

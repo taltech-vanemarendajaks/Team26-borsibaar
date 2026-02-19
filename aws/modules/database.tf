@@ -12,7 +12,7 @@ resource "aws_security_group" "database_sg" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = [local.vpc_cidr]
+    security_groups = [aws_security_group.ecs_service_sg.id]
     description = "Allow MySQL from internal network"
   }
 
@@ -51,7 +51,7 @@ resource "aws_ssm_parameter" "wordpress_db_host" {
   name        = "/dev/WORDPRESS_DB_HOST_${local.resource_prefix}"
   description = "WordPress DB endpoint with port"
   type        = "String"  # plain text
-  value       = "${aws_db_instance.database_instance.endpoint}:3306"  # endpoint of your RDS cluster
+  value       = aws_db_instance.database_instance.address
   tier        = "Standard"
 }
 
